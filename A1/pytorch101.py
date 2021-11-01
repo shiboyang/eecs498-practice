@@ -440,7 +440,9 @@ def zero_row_min(x):
     #                    TODO: Implement this function                          #
     #############################################################################
     # Replace "pass" statement with your code
-    pass
+    y = x.clone()
+    _, row_min_idxs = y.min(dim=1)
+    y[torch.arange(y.shape[0]), row_min_idxs] = 0
     #############################################################################
     #                            END OF YOUR CODE                               #
     #############################################################################
@@ -473,7 +475,10 @@ def batched_matrix_multiply(x, y, use_loop=True):
     #                    TODO: Implement this function                          #
     #############################################################################
     # Replace "pass" statement with your code
-    pass
+    z = torch.()
+
+    else:
+        pass
     #############################################################################
     #                            END OF YOUR CODE                               #
     #############################################################################
