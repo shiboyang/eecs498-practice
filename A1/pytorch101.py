@@ -475,10 +475,12 @@ def batched_matrix_multiply(x, y, use_loop=True):
     #                    TODO: Implement this function                          #
     #############################################################################
     # Replace "pass" statement with your code
-    z = torch.()
-
+    z = x.new_zeros((x.shape[0], x.shape[1], y.shape[2]))
+    if use_loop:
+        for i in range(len(x)):
+            z[i] = x[i].mm(y[i])
     else:
-        pass
+        torch.bmm(x, y, out=z)
     #############################################################################
     #                            END OF YOUR CODE                               #
     #############################################################################
@@ -513,7 +515,9 @@ def normalize_columns(x):
     #                    TODO: Implement this function                          #
     #############################################################################
     # Replace "pass" statement with your code
-    pass
+    mean_matrix = torch.sum(x, dim=0) / x.shape[0]
+    standard_deviation = torch.sqrt(torch.sum((x - mean_matrix) ** 2, dim=0) / (x.shape[0] - 1))
+    y = (x - mean_matrix) / standard_deviation
     #############################################################################
     #                            END OF YOUR CODE                               #
     #############################################################################
@@ -558,7 +562,9 @@ def mm_on_gpu(x, w):
     #                    TODO: Implement this function                          #
     #############################################################################
     # Replace "pass" statement with your code
-    pass
+    x_gpu = x.cuda()
+    w_gpu = w.cuda()
+    y = x_gpu.mm(w_gpu).cpu()
     #############################################################################
     #                            END OF YOUR CODE                               #
     #############################################################################
