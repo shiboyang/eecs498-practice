@@ -156,8 +156,8 @@ def compute_distances_no_loops(x_train, x_test):
     ##############################################################################
     # Replace "pass" statement with your code
     # L1 距离
-    _x_train = x_train.view(num_train, -1)
-    _x_test = x_test.view(num_test, -1)
+    _x_train = x_train.reshape(num_train, -1)
+    _x_test = x_test.reshape(num_test, -1)
     # L1距离公式
     # dists = (_x_train.view(num_train, 1, -1) - _x_test.view(1, num_test, -1)).abs().sum(dim=2)
     # Method2
@@ -383,7 +383,16 @@ def knn_get_best_k(k_to_accuracies):
     # the value of k that has the highest mean accuracy accross all folds.       #
     ##############################################################################
     # Replace "pass" statement with your code
-    pass
+    accuracy = 0
+    for k, v in k_to_accuracies.items():
+        mean_accuracy = sum(v) / len(v)
+        if best_k == 0:
+            best_k = k
+            accuracy = mean_accuracy
+        else:
+            if accuracy < mean_accuracy:
+                best_k = k
+                accuracy = mean_accuracy
     ##############################################################################
     #                            END OF YOUR CODE                                #
     ##############################################################################
