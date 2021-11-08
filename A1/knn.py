@@ -61,7 +61,7 @@ def compute_distances_two_loops(x_train, x_test):
     # Replace "pass" statement with your code
     for i in range(num_train):
         for j in range(num_test):
-            dists[i, j] = (x_train[i] - x_test[j]).abs().sum()
+            dists[i, j] = (((x_train[i] - x_test[j]) ** 2).sum()) ** 0.5
     dists.to(x_train.dtype)
     ##############################################################################
     #                             END OF YOUR CODE                               #
@@ -106,7 +106,7 @@ def compute_distances_one_loop(x_train, x_test):
     ##############################################################################
     # Replace "pass" statement with your code
     for i in range(num_train):
-        dists[i, :] = (x_train[i] - x_test).abs().sum(dim=(1, 2, 3))
+        dists[i, :] = ((x_train[i] - x_test) ** 2).sum(dim=(1, 2, 3)).sqrt()
     ##############################################################################
     #                             END OF YOUR CODE                               #
     ##############################################################################
@@ -155,11 +155,20 @@ def compute_distances_no_loops(x_train, x_test):
     #       and a matrix multiply.                                               #
     ##############################################################################
     # Replace "pass" statement with your code
+    # L1 距离
     _x_train = x_train.view(num_train, -1)
     _x_test = x_test.view(num_test, -1)
-    dists = (_x_train.view(num_train, 1, -1) - _x_test.view(1, num_test, -1)).abs().sum(dim=2)
+    # L1距离公式
+    # dists = (_x_train.view(num_train, 1, -1) - _x_test.view(1, num_test, -1)).abs().sum(dim=2)
     # Method2
     # dists = (x_train.view(num_train, 1, 3, 16, 16) - x_test).abs().sum(dim=(2, 3, 4))
+    # L2 距离
+    # print(x_train.square().sum(dim=1).view(1, -1) + x_test.square().sum(dim=1).view(-1, 1))
+    # L2 简化版公式
+    dists = _x_train.square().sum(dim=1).view(-1, 1) + _x_test.square().sum(dim=1).view(1, -1) - 2 * _x_train.mm(
+        _x_test.T)
+    dists = dists.sqrt()
+
     ##############################################################################
     #                             END OF YOUR CODE                               #
     ##############################################################################
@@ -199,7 +208,10 @@ def predict_labels(dists, y_train, k=1):
     # samples. Hint: Look up the function torch.topk                             #
     ##############################################################################
     # Replace "pass" statement with your code
-    pass
+    for i in range(num_test):
+        label_indices = torch.topk(dists[:, i], k, largest=False).indices
+        y_pred[i] = y_train[label_indices].bincount().argmax()
+
     ##############################################################################
     #                             END OF YOUR CODE                               #
     ##############################################################################
@@ -221,7 +233,8 @@ class KnnClassifier:
         # computation and simply memorize the training data.                      #
         ###########################################################################
         # Replace "pass" statement with your code
-        pass
+        self.x_train = x_train
+        self.y_train = y_train
         ###########################################################################
         #                           END OF YOUR CODE                              #
         ###########################################################################
@@ -245,7 +258,8 @@ class KnnClassifier:
         # output labels.
         ###########################################################################
         # Replace "pass" statement with your code
-        pass
+        dists = compute_distances_no_loops(self.x_train, x_test)
+        y_test_pred = predict_labels(dists, self.y_train, k)
         ###########################################################################
         #                           END OF YOUR CODE                              #
         ###########################################################################
@@ -307,7 +321,8 @@ def knn_cross_validate(x_train, y_train, num_folds=5, k_choices=None):
     # Hint: torch.chunk                                                          #
     ##############################################################################
     # Replace "pass" statement with your code
-    pass
+    x_train_folds = torch.chunk(x_train, num_folds)
+    y_train_folds = torch.chunk(y_train, num_folds)
     ##############################################################################
     #                            END OF YOUR CODE                                #
     ##############################################################################
@@ -326,7 +341,19 @@ def knn_cross_validate(x_train, y_train, num_folds=5, k_choices=None):
     # values in k in k_to_accuracies.   HINT: torch.cat                          #
     ##############################################################################
     # Replace "pass" statement with your code
-    pass
+    for k in k_choices:
+        accuracies = []
+        for i in range(num_folds):
+            x_train_list = [x_train_folds[x] for x in range(num_folds) if x != i]
+            y_train_list = [y_train_folds[x] for x in range(num_folds) if x != i]
+            _x_train = torch.cat(x_train_list)
+            _y_train = torch.cat(y_train_list)
+            classifier = KnnClassifier(_x_train, _y_train)
+            acc = classifier.check_accuracy(x_train_folds[i], y_train_folds[i], k, quiet=True)
+            accuracies.append(acc)
+
+        k_to_accuracies.update({k: accuracies.copy()})
+
     ##############################################################################
     #                            END OF YOUR CODE                                #
     ##############################################################################
