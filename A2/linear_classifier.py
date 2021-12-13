@@ -181,7 +181,21 @@ def svm_loss_vectorized(W, X, y, reg):
     # result in loss.                                                           #
     #############################################################################
     # Replace "pass" statement with your code
-    pass
+    num_classes = W.shape[1]
+    num_train = X.shape[0]
+
+    scores = X.mm(W)
+    # 计算正确的得分
+    correct_class_score = scores[torch.arange(num_train), y]
+    # 计算正确得分和错误得分之间的差值
+    scores = scores - correct_class_score.view(num_train, 1) + 1
+    # 求L(i)
+    scores = torch.maximum(torch.zeros_like(scores), scores)
+    # 将L(i)中正确的分的那一项设置为0
+    scores[torch.arange(num_train), y] = 0
+    loss += torch.sum(scores) / num_train
+    loss += reg * torch.sum(W * W)
+
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -196,7 +210,11 @@ def svm_loss_vectorized(W, X, y, reg):
     # loss.                                                                     #
     #############################################################################
     # Replace "pass" statement with your code
-    pass
+    scores[scores > 0] = 1
+    count = torch.sum(scores, dim=1)
+    scores[torch.arange(num_train), y] = -count
+
+    dW = X.T.mm(scores) / num_train + reg * 2 * W
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -219,7 +237,10 @@ def sample_batch(X, y, num_train, batch_size):
     # Hint: Use torch.randint to generate indices.                          #
     #########################################################################
     # Replace "pass" statement with your code
-    pass
+    indices = torch.randint(num_train, (batch_size,))
+    X_batch = X[indices]
+    y_batch = y[indices]
+
     #########################################################################
     #                       END OF YOUR CODE                                #
     #########################################################################
@@ -277,7 +298,7 @@ def train_linear_classifier(loss_func, W, X, y, learning_rate=1e-3,
         # Update the weights using the gradient and the learning rate.          #
         #########################################################################
         # Replace "pass" statement with your code
-        pass
+        W += learning_rate * grad
         #########################################################################
         #                       END OF YOUR CODE                                #
         #########################################################################
@@ -510,7 +531,7 @@ if __name__ == '__main__':
 
     # Compute the loss and its gradient at W.
     # YOUR_TURN: implement the gradient part of 'svm_loss_naive' function in "linear_classifier.py"
-    _, grad = svm_loss_naive(W, X_batch, y_batch, reg=0.0)
+    _, grad = svm_loss_vectorized(W, X_batch, y_batch, reg=0.0)
 
     # Numerically compute the gradient along several randomly chosen dimensions, and
     # compare them with your analytically computed gradient. The numbers should
