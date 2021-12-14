@@ -329,7 +329,8 @@ def predict_linear_classifier(W, X):
     # Implement this method. Store the predicted labels in y_pred.            #
     ###########################################################################
     # Replace "pass" statement with your code
-    pass
+    y_pred = torch.argmax(X @ W, dim=1)
+    # torch.cuda.synchronize()
     ###########################################################################
     #                           END OF YOUR CODE                              #
     ###########################################################################
