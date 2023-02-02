@@ -131,3 +131,4 @@ dmypy.json
 /A1/.idea/
 idea/
 */cifar-10-python.tar.gz
+*/cifar-10-batches-py/
