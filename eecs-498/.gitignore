@@ -129,6 +129,6 @@ dmypy.json
 .pyre/
 /A1/.idea/
 /A1/.idea/
-idea/
+*/idea/
 */cifar-10-python.tar.gz
 */cifar-10-batches-py/
