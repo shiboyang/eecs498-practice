@@ -60,7 +60,7 @@ class Conv(object):
         NUM_K, C, HH, WW = w.shape
         out_h = int(1 + (H + 2 * pad - HH) / stride)
         out_w = int(1 + (W + 2 * pad - WW) / stride)
-        out = torch.zeros([N, NUM_K, out_h, out_w], device=x.device)
+        out = torch.zeros([N, NUM_K, out_h, out_w], device=x.device, dtype=x.dtype)
         for n in range(N):
             for f in range(NUM_K):
                 for hi in range(out_h):
@@ -71,7 +71,7 @@ class Conv(object):
         #####################################################################
         #                          END OF YOUR CODE                         #
         #####################################################################
-        cache = (x, w, b, conv_param)
+        cache = (padded_x, w, b, conv_param)
         return out, cache
 
     @staticmethod
@@ -97,14 +97,20 @@ class Conv(object):
         stride = conv_param["stride"]
         N, F, out_h, out_w = dout.shape
         F, C, HH, WW = w.shape
+        dx = torch.zeros_like(x)
+        dw = torch.zeros_like(w)
+        db = torch.zeros_like(b)
+
         for n in range(N):
             for f in range(F):
-                for hi in range(HH):
-                    for wi in range(WW):
-                        dx =
-                        dw =
-                        db =
-
+                for hi in range(out_h):
+                    for wi in range(out_w):
+                        dx[n, :, hi * stride:hi * stride + HH, wi * stride:wi * stride + WW] += w[f] * dout[
+                            n, f, hi, wi]
+                        dw[f] += x[n, :, hi * stride:hi * stride + HH, wi * stride:wi * stride + WW] * dout[
+                            n, f, hi, wi]
+                        db[f] += dout[n, f, hi, wi]
+        dx = dx[..., 1:-1, 1:-1]
         ###############################################################
         #                       END OF YOUR CODE                      #
         ###############################################################
@@ -137,7 +143,18 @@ class MaxPool(object):
         # TODO: Implement the max-pooling forward pass                     #
         ####################################################################
         # Replace "pass" statement with your code
-        pass
+        N, C, H, W = x.shape
+        HH = pool_param["pool_height"]
+        WW = pool_param["pool_width"]
+        stride = pool_param["stride"]
+        out_h = int((H - HH) / stride + 1)
+        out_w = int((W - WW) / stride + 1)
+        out = torch.zeros((N, C, out_h, out_w), device=x.device, dtype=x.dtype)
+        for n in range(N):
+            for hi in range(out_h):
+                for wi in range(out_w):
+                    tmp = x[n, :, hi * stride:hi * stride + HH, wi * stride:wi * stride + WW].reshape(C, -1)
+                    out[n, :, hi, wi] = tmp.max(dim=-1).values
         ####################################################################
         #                         END OF YOUR CODE                         #
         ####################################################################
@@ -159,7 +176,24 @@ class MaxPool(object):
         # TODO: Implement the max-pooling backward pass                     #
         #####################################################################
         # Replace "pass" statement with your code
-        pass
+        x, pool_param = cache
+        N, C, H, W = x.shape
+        HH = pool_param["pool_height"]
+        WW = pool_param["pool_width"]
+        stride = pool_param["stride"]
+        out_h = int((H - HH) / stride + 1)
+        out_w = int((W - WW) / stride + 1)
+        dx = torch.zeros_like(x)
+        for n in range(N):
+            for hi in range(out_h):
+                for wi in range(out_w):
+                    x2 = x[n, :, hi * stride:hi * stride + HH, wi * stride:wi * stride + WW]
+                    reshaped_x = x2.reshape(C, -1)
+                    max_x_indices = reshaped_x.max(dim=-1).indices
+                    max_x_mask = torch.zeros_like(x2).reshape(reshaped_x.shape)
+                    max_x_mask[range(reshaped_x.shape[0]), max_x_indices] = dout[n, :, hi, wi]
+                    dx[n, :, hi*stride:hi*stride+HH, wi*stride:wi*stride+WW] = max_x_mask.reshape(x2.shape)
+
         ####################################################################
         #                          END OF YOUR CODE                        #
         ####################################################################
