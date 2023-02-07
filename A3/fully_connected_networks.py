@@ -7,14 +7,6 @@ from a3_helper import softmax_loss
 from eecs598 import Solver
 
 
-def hello_fully_connected_networks():
-    """
-    This is a sample function that we will try to import and run to ensure that
-    our environment is correctly set up on Google Colab.
-    """
-    print('Hello from fully_connected_networks.py!')
-
-
 class Linear(object):
 
     @staticmethod
@@ -77,6 +69,14 @@ class Linear(object):
         #                END OF YOUR CODE                #
         ##################################################
         return dx, dw, db
+
+
+def hello_fully_connected_networks():
+    """
+    This is a sample function that we will try to import and run to ensure that
+    our environment is correctly set up on Google Colab.
+    """
+    print('Hello from fully_connected_networks.py!')
 
 
 class ReLU(object):
