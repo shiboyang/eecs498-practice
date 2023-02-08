@@ -823,7 +823,35 @@ class BatchNorm(object):
             # (https://arxiv.org/abs/1502.03167) might prove to be helpful.  #
             ##################################################################
             # Replace "pass" statement with your code
-            pass
+            # mu = torch.mean(x, dim=0, keepdim=True)  # [1,D]
+            # sigma = torch.mean((x - mu) ** 2, dim=0)  # [N,D] - [1,D] = [N,D] ==> [1,D]
+            # x_hat = (x - mu) / torch.sqrt(sigma + eps)
+            # out = gamma * x_hat + beta
+
+            # 1.计算平均值
+            mu = torch.mean(x, dim=0, keepdim=True)  # [D]
+            # 2.x-mean
+            xmu = x - mu  # [N,D]
+            # 3.square
+            square_xmu = xmu ** 2  # [N,D]
+            # 4.计算方差
+            variance = torch.mean(square_xmu, dim=0, keepdim=True)  # [D]
+            # 5.sqrt
+            sqrt_var = (variance + eps).sqrt()  # [D]
+            # 6 invert
+            invert_sqrtvar = 1 / sqrt_var  # [D]
+            # 7.xhat
+            xhat = xmu * invert_sqrtvar  # [N,D]
+            # 8. *gamma
+            gammax = gamma * xhat
+            # 9. +beta
+            out = gammax + beta
+
+            cache = (xhat, gamma, invert_sqrtvar, sqrt_var, variance, xmu, eps)
+
+            running_mean = momentum * running_mean + (1 - momentum) * mu
+            running_var = momentum * running_var + (1 - momentum) * variance
+
             ################################################################
             #                           END OF YOUR CODE                   #
             ################################################################
@@ -836,10 +864,20 @@ class BatchNorm(object):
             # in the out variable.                                         #
             ################################################################
             # Replace "pass" statement with your code
-            pass
-            ################################################################
-            #                      END OF YOUR CODE                        #
-            ################################################################
+            # x_hat = (x - running_mean) / torch.sqrt(running_var + eps)
+            # out = gamma * x_hat + beta
+            xmu = x - running_mean
+            variance = running_var
+            sqrt_var = (variance + eps).sqrt()
+            invert_sqrtvar = 1 / sqrt_var
+            xhat = xmu * invert_sqrtvar
+            gammax = gamma * xhat
+            out = gammax + beta
+            cache = ()
+
+        ################################################################
+        #                      END OF YOUR CODE                        #
+        ################################################################
         else:
             raise ValueError('Invalid forward batchnorm mode "%s"' % mode)
 
@@ -878,7 +916,35 @@ class BatchNorm(object):
         # Don't forget to implement train and test mode separately.         #
         #####################################################################
         # Replace "pass" statement with your code
-        pass
+        xhat, gamma, invert_sqrtvar, sqrt_var, variance, xmu, eps = cache
+
+        # 9
+        dbeta = 1 * torch.sum(dout, dim=0)  # [D]
+        dgammax = 1 * dout  # [N,D]
+        # 8
+        dgamma = (xhat * dgammax).sum(0)
+        dxhat = dgammax * gamma
+        # 7
+        dxmu1 = dxhat * invert_sqrtvar
+        dinvert_sqrtvar = (dxhat * xmu).sum(0)
+        # 6
+        dsqrt_var = dinvert_sqrtvar * -1 / sqrt_var.square()
+        # 5
+        dvariance = dsqrt_var * 0.5 * 1 / (variance + eps).sqrt()
+        # 4
+        N = xmu.shape[0]
+        dsquare_xmu = 1 / N * torch.ones(xmu.shape, device=xmu.device) * dvariance
+        # 3
+        dxmu2 = dsquare_xmu * 2 * xmu
+        # 2
+        dxmu = dxmu1 + dxmu2
+        dx1 = 1 * dxmu
+        dmu = -1 * dxmu.sum(0)
+        # 1
+        N = xmu.shape[0]
+        dx2 = 1 / N * torch.ones(xmu.shape, device=xmu.device) * dmu
+
+        dx = dx1 + dx2
         #################################################################
         #                      END OF YOUR CODE                         #
         #################################################################
