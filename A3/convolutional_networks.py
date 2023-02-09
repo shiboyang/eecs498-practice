@@ -847,7 +847,7 @@ class BatchNorm(object):
             # 9. +beta
             out = gammax + beta
 
-            cache = (xhat, gamma, invert_sqrtvar, sqrt_var, variance, xmu, eps)
+            cache = (xhat, gamma, invert_sqrtvar, sqrt_var, variance, xmu, eps, mode)
 
             running_mean = momentum * running_mean + (1 - momentum) * mu
             running_var = momentum * running_var + (1 - momentum) * variance
@@ -873,7 +873,7 @@ class BatchNorm(object):
             xhat = xmu * invert_sqrtvar
             gammax = gamma * xhat
             out = gammax + beta
-            cache = ()
+            cache = (xhat, gamma, invert_sqrtvar, sqrt_var, variance, xmu, eps, mode)
 
         ################################################################
         #                      END OF YOUR CODE                        #
@@ -916,35 +916,42 @@ class BatchNorm(object):
         # Don't forget to implement train and test mode separately.         #
         #####################################################################
         # Replace "pass" statement with your code
-        xhat, gamma, invert_sqrtvar, sqrt_var, variance, xmu, eps = cache
+        xhat, gamma, invert_sqrtvar, sqrt_var, variance, xmu, eps, mode = cache
+        if mode == "train":
+            # 9
+            dbeta = 1 * torch.sum(dout, dim=0)  # [D]
+            dgammax = 1 * dout  # [N,D]
+            # 8
+            dgamma = (xhat * dgammax).sum(0)
+            dxhat = dgammax * gamma
+            # 7
+            dxmu1 = dxhat * invert_sqrtvar
+            dinvert_sqrtvar = (dxhat * xmu).sum(0)
+            # 6
+            dsqrt_var = dinvert_sqrtvar * -1 / sqrt_var.square()
+            # 5
+            dvariance = dsqrt_var * 0.5 * 1 / (variance + eps).sqrt()
+            # 4
+            N = xmu.shape[0]
+            dsquare_xmu = 1 / N * torch.ones(xmu.shape, device=xmu.device) * dvariance
+            # 3
+            dxmu2 = dsquare_xmu * 2 * xmu
+            # 2
+            dxmu = dxmu1 + dxmu2
+            dx1 = 1 * dxmu
+            dmu = -1 * dxmu.sum(0)
+            # 1
+            N = xmu.shape[0]
+            dx2 = 1 / N * torch.ones(xmu.shape, device=xmu.device) * dmu
 
-        # 9
-        dbeta = 1 * torch.sum(dout, dim=0)  # [D]
-        dgammax = 1 * dout  # [N,D]
-        # 8
-        dgamma = (xhat * dgammax).sum(0)
-        dxhat = dgammax * gamma
-        # 7
-        dxmu1 = dxhat * invert_sqrtvar
-        dinvert_sqrtvar = (dxhat * xmu).sum(0)
-        # 6
-        dsqrt_var = dinvert_sqrtvar * -1 / sqrt_var.square()
-        # 5
-        dvariance = dsqrt_var * 0.5 * 1 / (variance + eps).sqrt()
-        # 4
-        N = xmu.shape[0]
-        dsquare_xmu = 1 / N * torch.ones(xmu.shape, device=xmu.device) * dvariance
-        # 3
-        dxmu2 = dsquare_xmu * 2 * xmu
-        # 2
-        dxmu = dxmu1 + dxmu2
-        dx1 = 1 * dxmu
-        dmu = -1 * dxmu.sum(0)
-        # 1
-        N = xmu.shape[0]
-        dx2 = 1 / N * torch.ones(xmu.shape, device=xmu.device) * dmu
-
-        dx = dx1 + dx2
+            dx = dx1 + dx2
+        else:
+            dbeta = 1 * dout.sum(0)
+            dgammax = 1 * dout
+            dgamma = (dgammax * xhat).sum(0)
+            dxhat = dgammax * gamma
+            dxum = dxhat * invert_sqrtvar
+            dx = 1 * dxum
         #################################################################
         #                      END OF YOUR CODE                         #
         #################################################################
