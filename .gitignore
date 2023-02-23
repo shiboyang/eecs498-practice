@@ -135,3 +135,9 @@ cifar-10-batches-py/
 */*.pth
 .idea/
 *.pt
+VOCtrainval_06-Nov-2007.tar
+voc07_train.json
+voc07_val.json
+.zip
+*/mAP/
+*/VOCdevkit
